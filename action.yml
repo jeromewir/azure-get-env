@@ -1,0 +1,30 @@
+name: "Azure app service variables"
+description: "Service to retrieve a list of environment variables on app-service"
+inputs:
+  app-service-name:
+    description: "Name of the app-service"
+    required: true
+  subscription-id:
+    description: "ID of the subscription"
+    required: true
+  ressource-group:
+    description: "Name of the ressource group"
+    required: true
+  app-id:
+    description: "Service principal app-id"
+    required: true
+  password:
+    description: "Service principal password"
+    required: true
+  tenant-id:
+    description: "ID of the tenant"
+    required: true
+  slot-name:
+    description: "Name of the slot to retrieve environment from"
+    required: false
+outputs:
+  variables-names: # id of output
+    description: "The name of all environment variables that are set"
+runs:
+  using: "node16"
+  main: "build/index.js"
