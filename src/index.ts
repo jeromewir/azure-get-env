@@ -1,16 +1,16 @@
-import core from "@actions/core";
-import github from "@actions/github";
+import * as core from "@actions/core";
 
 import { ClientSecretCredential } from "@azure/identity";
 import { WebSiteManagementClient } from "@azure/arm-appservice";
 
 const getFromCore = () => {
-  const subscriptionID = core.getInput("subscription-id");
-  const ressourceGroup = core.getInput("resource-group");
-  const appServiceName = core.getInput("app-service-name");
-  const appId = core.getInput("app-id");
-  const password = core.getInput("password");
-  const tenantId = core.getInput("tenant-id");
+  const subscriptionID = core.getInput("subscription-id", { required: true });
+  const ressourceGroup = core.getInput("ressource-group", { required: true });
+  const appServiceName = core.getInput("app-service-name", { required: true });
+  const appId = core.getInput("app-id", { required: true });
+  const password = core.getInput("password", { required: true });
+  const tenantId = core.getInput("tenant-id", { required: true });
+  const slotName = core.getInput("slot-name", { required: false });
 
   return {
     subscriptionID,
@@ -19,7 +19,43 @@ const getFromCore = () => {
     appId,
     password,
     tenantId,
+    slotName,
   };
+};
+
+const getError = ({
+  subscriptionID,
+  ressourceGroup,
+  appServiceName,
+  appId,
+  password,
+  tenantId,
+}: Partial<ReturnType<typeof getFromCore>>) => {
+  if (!subscriptionID) {
+    return "subscription-id is required";
+  }
+
+  if (!ressourceGroup) {
+    return "ressource-group is required";
+  }
+
+  if (!appServiceName) {
+    return "app-service-name is required";
+  }
+
+  if (!appId) {
+    return "app-id is required";
+  }
+
+  if (!password) {
+    return "password is required";
+  }
+
+  if (!tenantId) {
+    return "tenant-id is required";
+  }
+
+  return undefined;
 };
 
 const run = async () => {
@@ -30,7 +66,22 @@ const run = async () => {
     appId,
     password,
     tenantId,
+    slotName,
   } = getFromCore();
+
+  const error = getError({
+    subscriptionID,
+    ressourceGroup,
+    appServiceName,
+    appId,
+    password,
+    tenantId,
+  });
+
+  if (error) {
+    core.setFailed(error);
+    return;
+  }
 
   // Create a new instance of the ClientSecretCredential class
   const credential = new ClientSecretCredential(tenantId, appId, password);
@@ -38,16 +89,33 @@ const run = async () => {
   // Create a new instance of the WebSiteManagementClient class
   const client = new WebSiteManagementClient(credential, subscriptionID);
 
-  // TODO: handle slots
-  // Call the listApplicationSettings method to retrieve the App Service's environment variables
-  const appSettings = await client.webApps.listApplicationSettings(
-    ressourceGroup,
-    appServiceName
-  );
+  let properties:
+    | {
+        [propertyName: string]: string;
+      }
+    | undefined;
 
-  if (appSettings.properties) {
-    core.setOutput("app-settings", Object.keys(appSettings.properties));
+  if (slotName) {
+    ({ properties } = await client.webApps.listApplicationSettingsSlot(
+      ressourceGroup,
+      appServiceName,
+      slotName
+    ));
+  } else {
+    ({ properties } = await client.webApps.listApplicationSettings(
+      ressourceGroup,
+      appServiceName
+    ));
+  }
+
+  if (properties) {
+    core.setOutput(
+      "app-settings",
+      `(\n${Object.keys(properties).join("\n")}\n)`
+    );
+  } else {
+    core.setOutput("app-settings", "()");
   }
 };
 
-export default run;
+run();

@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "nodemon -e 'ts' --exec 'ts-node src/index.ts'",
-    "build": "ncc build src/index.ts -o build"
+    "build": "ncc build -d src/index.ts -o build"
   },
   "devDependencies": {
     "@types/node": "^18.15.5",
